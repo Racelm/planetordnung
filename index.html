@@ -652,6 +652,7 @@ async function saveKunde() {
   const name=document.getElementById('k-name').value.trim();
   const vorname=document.getElementById('k-vorname').value.trim();
   if(!name||!vorname) return toast('Name und Vorname sind Pflichtfelder',false);
+  toast('Wird gespeichert...', true);
   const data={
     kundennummer:document.getElementById('k-nr').value,
     name,vorname,
@@ -680,11 +681,22 @@ async function saveKunde() {
     notizen:document.getElementById('k-notizen').value,
   };
   const id=document.getElementById('k-id').value;
-  if(id) await sbPatch('kunden',id,data);
-  else await sbPost('kunden',data);
-  toast('Kunde gespeichert');
-  await loadAll();
-  showPage('kunden');
+  try {
+    let res;
+    if(id) res=await sbPatch('kunden',id,data);
+    else res=await sbPost('kunden',data);
+    console.log('Supabase Antwort:', JSON.stringify(res));
+    if(res && !res.error) {
+      toast('Kunde gespeichert ✅');
+      await loadAll();
+      showPage('kunden');
+    } else {
+      toast('Fehler: '+(res?.error?.message||res?.message||JSON.stringify(res)), false);
+    }
+  } catch(e) {
+    toast('Verbindungsfehler: '+e.message, false);
+    console.error('saveKunde Fehler:', e);
+  }
 }
 
 async function delKunde(id) {
