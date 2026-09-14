@@ -436,7 +436,7 @@ tr.dim td{opacity:.5;font-style:italic}
 <!-- FIREBASE SDK -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut }
+import { getAuth, signInAnonymously, onAuthStateChanged, signOut }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc,
   getDocs, getDoc, query, where, orderBy, onSnapshot, setDoc, enableIndexedDbPersistence }
@@ -532,70 +532,20 @@ async function fsGet(col, id)     { const d=await getDoc(doc(db,`users/${current
 async function fsAll(col)         { const s=await getDocs(userCol(col)); return s.docs.map(d=>({id:d.id,...d.data()})); }
 async function fsWhere(col,f,op,v){ const q=query(userCol(col),where(f,op,v)); const s=await getDocs(q); return s.docs.map(d=>({id:d.id,...d.data()})); }
 
-// ── AUTH ───────────────────────────────────────────────────
-function showLogin(){
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  $('v-login').classList.add('active');
-  $('user-badge').style.display='none';
-  $('btn-logout').style.display='none';
-}
-function showHome(user){
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  $('v-home').classList.add('active');
-  $('user-badge').textContent=user.displayName||user.email||'Angemeldet';
-  $('user-badge').style.display='block';
-  $('btn-logout').style.display='block';
-  renderHomeStats();
-  loadLogo();
-}
-function hideLoader(){
-  $('loader').classList.add('hide');
-}
-
-on($('google-btn'),'click',async()=>{
-  const btn=$('google-btn');
-  btn.disabled=true;
-  btn.innerHTML='⏳ Wird angemeldet...';
-  try{
-    const provider=new GoogleAuthProvider();
-    try{
-      await signInWithPopup(auth,provider);
-    }catch(popErr){
-      // Popup blockiert → Redirect versuchen
-      if(popErr.code==='auth/popup-blocked'||popErr.code==='auth/popup-closed-by-user'||popErr.code==='auth/cancelled-popup-request'){
-        await signInWithRedirect(auth,provider);
-      } else {
-        throw popErr;
-      }
-    }
-  }catch(e){
-    btn.disabled=false;
-    btn.innerHTML='<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:20px"> Mit Google anmelden';
-    toast('Anmeldung fehlgeschlagen: '+e.message,false);
-  }
-});
-
-on($('btn-logout'),'click',async()=>{
-  if(confirm('Wirklich abmelden?')) await signOut(auth);
-});
-
-// Redirect-Ergebnis nach Google-Login verarbeiten
-getRedirectResult(auth).then(result=>{
-  if(result&&result.user){
-    hideLoader();
-    showHome(result.user);
-  }
-}).catch(e=>console.log('Redirect:',e.code));
-
-// Kein Timeout nötig
-
+// ── AUTH – Automatisch anmelden ────────────────────────────
 onAuthStateChanged(auth, async user=>{
   currentUser=user;
-  hideLoader();
+  $('loader').classList.add('hide');
   if(user){
-    showHome(user);
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    $('v-home').classList.add('active');
+    $('user-badge').textContent='Planet Ordnung';
+    $('user-badge').style.display='block';
+    $('btn-logout').style.display='none';
+    renderHomeStats();
+    loadLogo();
   } else {
-    showLogin();
+    signInAnonymously(auth).catch(e=>console.log('Auto-login:',e));
   }
 });
 
