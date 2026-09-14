@@ -439,33 +439,40 @@ const SB_URL = 'https://iaufwaesdbsgccaejyhx.supabase.co';
 const SB_KEY = 'sb_publishable_pQ0EldZA5TfgFS-I0dIprA__SgB81RG';
 
 // ── SUPABASE API ──────────────────────────────────────────
+function sbHeaders(extra={}) {
+  return {'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, ...extra};
+}
 async function sbGet(table, params='') {
   const r = await fetch(`${SB_URL}/rest/v1/${table}?${params}`, {
-    headers: {'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`}
+    headers: sbHeaders()
   });
+  if(!r.ok) { console.error('sbGet error:', r.status, await r.text()); return []; }
   return r.json();
 }
 async function sbPost(table, data) {
   const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
     method: 'POST',
-    headers: {'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation'},
+    headers: sbHeaders({'Content-Type': 'application/json', 'Prefer': 'return=representation'}),
     body: JSON.stringify(data)
   });
+  if(!r.ok) { console.error('sbPost error:', r.status, await r.text()); return null; }
   return r.json();
 }
 async function sbPatch(table, id, data) {
   const r = await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`, {
     method: 'PATCH',
-    headers: {'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation'},
+    headers: sbHeaders({'Content-Type': 'application/json', 'Prefer': 'return=representation'}),
     body: JSON.stringify(data)
   });
+  if(!r.ok) { console.error('sbPatch error:', r.status, await r.text()); return null; }
   return r.json();
 }
 async function sbDelete(table, id) {
-  await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`, {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`, {
     method: 'DELETE',
-    headers: {'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`}
+    headers: sbHeaders()
   });
+  if(!r.ok) console.error('sbDelete error:', r.status, await r.text());
 }
 
 // ── STATE ─────────────────────────────────────────────────
@@ -483,7 +490,19 @@ async function init() {
   document.getElementById('today-date').textContent = new Date().toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   setupCanvas();
   setupChips();
-  await loadAll();
+  // Timeout falls Supabase nicht antwortet
+  const timeout = setTimeout(()=>{
+    document.getElementById('loader').classList.add('hide');
+    document.getElementById('main-ui').classList.remove('hide');
+    toast('Verbindungsproblem - bitte Seite neu laden', false);
+  }, 8000);
+  try {
+    await loadAll();
+    clearTimeout(timeout);
+  } catch(e) {
+    clearTimeout(timeout);
+    console.error('Init error:', e);
+  }
   document.getElementById('loader').classList.add('hide');
   document.getElementById('main-ui').classList.remove('hide');
 }
