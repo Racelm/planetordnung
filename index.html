@@ -436,7 +436,7 @@ tr.dim td{opacity:.5;font-style:italic}
 <!-- FIREBASE SDK -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, signInAnonymously, onAuthStateChanged, signOut }
+import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc,
   getDocs, getDoc, query, where, orderBy, onSnapshot, setDoc, enableIndexedDbPersistence }
@@ -532,22 +532,41 @@ async function fsGet(col, id)     { const d=await getDoc(doc(db,`users/${current
 async function fsAll(col)         { const s=await getDocs(userCol(col)); return s.docs.map(d=>({id:d.id,...d.data()})); }
 async function fsWhere(col,f,op,v){ const q=query(userCol(col),where(f,op,v)); const s=await getDocs(q); return s.docs.map(d=>({id:d.id,...d.data()})); }
 
-// ── AUTH – Automatisch anmelden ────────────────────────────
+// ── AUTH ───────────────────────────────────────────────────
+// Import wird oben geändert
 onAuthStateChanged(auth, async user=>{
   currentUser=user;
   $('loader').classList.add('hide');
   if(user){
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
     $('v-home').classList.add('active');
-    $('user-badge').textContent='Planet Ordnung';
+    $('user-badge').textContent=user.displayName||'Karin Koch';
     $('user-badge').style.display='block';
-    $('btn-logout').style.display='none';
+    $('btn-logout').style.display='block';
     renderHomeStats();
     loadLogo();
   } else {
-    signInAnonymously(auth).catch(e=>console.log('Auto-login:',e));
+    // Login-Screen zeigen
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    $('v-login').classList.add('active');
   }
 });
+
+on($('google-btn'),'click',async()=>{
+  try{
+    const provider=new GoogleAuthProvider();
+    await signInWithRedirect(auth,provider);
+  }catch(e){ toast('Fehler: '+e.message,false); }
+});
+
+on($('btn-logout'),'click',async()=>{
+  if(confirm('Abmelden?')) await signOut(auth);
+});
+
+// Redirect-Ergebnis verarbeiten
+getRedirectResult(auth).then(r=>{
+  if(r?.user) console.log('Login OK');
+}).catch(e=>console.log('Redirect:',e.code));
 
 // Logo als Base64 einbetten (für PDF)
 async function loadLogo(){
