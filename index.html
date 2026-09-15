@@ -1054,18 +1054,7 @@ async function saveEin(){
 
 // ── RECHNUNG FORM ──────────────────────────────────────────
 async function recExistVollmonat(kid,monat){
-  const all=await fsWhere('rechnungen','kundeId','==',kid);
-  const monatsRechnungen=all.filter(r=>r.monat===monat);
-  if(monatsRechnungen.length===0)return false;
-  const alleEinsaetze=await fsWhere('einsaetze','kundeId','==',kid);
-  const monatsEinsaetze=alleEinsaetze.filter(e=>(e.datum||'').startsWith(monat));
-  if(monatsEinsaetze.length===0)return false;
-  for(const rec of monatsRechnungen){
-    const seIds=(rec.selectedEinsaetze||[]).map(e=>e.id);
-    const alleAbgedeckt=monatsEinsaetze.every(e=>seIds.includes(e.id)||e.abgerechnet==='ja');
-    if(alleAbgedeckt)return true;
-  }
-  return false;
+  return false; // Keine Sperre
 }
 
 async function buildRecForm(preK,vorMonat){
