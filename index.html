@@ -231,7 +231,7 @@ body.dark .bc-red{background:#450a0a;border-color:#f87171}.body.dark .bc-red .bv
 #toast.show{display:flex}
 
 /* LOADER */
-#loader{display:none!important}
+#loader{display:none}
 #loader.hide{display:none}
 .loader-logo{font-size:3rem;margin-bottom:12px;animation:pulse 1.5s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
@@ -431,7 +431,7 @@ tr.dim td{opacity:.5;font-style:italic}
 <!-- FIREBASE SDK -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, onAuthStateChanged, signOut }
+import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc,
   getDocs, getDoc, query, where, orderBy, onSnapshot, setDoc, enableIndexedDbPersistence }
@@ -528,30 +528,64 @@ async function fsAll(col)         { const s=await getDocs(userCol(col)); return 
 async function fsWhere(col,f,op,v){ const q=query(userCol(col),where(f,op,v)); const s=await getDocs(q); return s.docs.map(d=>({id:d.id,...d.data()})); }
 
 // ── AUTH ───────────────────────────────────────────────────
-on($('btn-logout'),'click',async()=>{
-  if(confirm('Wirklich abmelden?')) {
-    await signOut(auth);
-    window.location.href = 'login.html';
+on($('google-btn'),'click',async()=>{
+  const btn=$('google-btn');
+  btn.disabled=true;
+  btn.innerHTML='⏳ Anmeldung läuft...';
+  try{
+    const provider=new GoogleAuthProvider();
+    await signInWithPopup(auth,provider);
+    // Login erfolgreich - onAuthStateChanged übernimmt
+  }catch(e){
+    btn.disabled=false;
+    btn.innerHTML='<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:20px;margin-right:8px"> Mit Google anmelden';
+    if(e.code!=='auth/popup-closed-by-user'){
+      toast('Fehler: '+e.message,false);
+    }
   }
 });
 
+on($('btn-logout'),'click',async()=>{
+  if(confirm('Wirklich abmelden?')) await signOut(auth);
+});
+
 onAuthStateChanged(auth, async user=>{
-  currentUser = user;
+  currentUser=user;
+  // Loader immer verstecken
+  const loader=document.getElementById('loader');
+  if(loader) loader.style.display='none';
+  
   if(user){
-    // Eingeloggt - App zeigen
-    document.getElementById('loader').style.display = 'none';
-    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-    document.getElementById('v-home').classList.add('active');
-    document.getElementById('user-badge').textContent = user.displayName || 'Karin Koch';
-    document.getElementById('user-badge').style.display = 'block';
-    document.getElementById('btn-logout').style.display = 'block';
+    // Login-Screen verstecken
+    const vlogin=document.getElementById('v-login');
+    if(vlogin){ vlogin.classList.remove('active'); vlogin.style.display='none'; }
+    // Alle views deaktivieren dann Home aktivieren
+    document.querySelectorAll('.view').forEach(v=>{ v.classList.remove('active'); v.style.display=''; });
+    const vhome=document.getElementById('v-home');
+    vhome.classList.add('active');
+    // Header
+    document.getElementById('user-badge').textContent=user.displayName||'Karin Koch';
+    document.getElementById('user-badge').style.display='block';
+    document.getElementById('btn-logout').style.display='block';
     renderHomeStats();
     loadLogo();
   } else {
-    // Nicht eingeloggt - zur Login-Seite
-    window.location.href = 'login.html';
+    // Alle views deaktivieren dann Login aktivieren
+    document.querySelectorAll('.view').forEach(v=>{ v.classList.remove('active'); v.style.display=''; });
+    const vlogin=document.getElementById('v-login');
+    if(vlogin){ vlogin.classList.add('active'); }
+    document.getElementById('user-badge').style.display='none';
+    document.getElementById('btn-logout').style.display='none';
   }
 });
+
+// Logo als Base64 einbetten (für PDF)
+async function loadLogo(){
+  // Logo direkt eingebettet - kein Storage nötig
+  // Logo wird beim ersten Start aus der App geladen
+  logoB64=null; // Wird inline verwendet falls vorhanden
+}
+
 // ── HOME STATS ─────────────────────────────────────────────
 async function renderHomeStats(){
   if(!currentUser) return;
