@@ -1102,7 +1102,7 @@ async function buildRecForm(preK,vorMonat){
   $('rec-body').innerHTML=`<div class="card">
     <div class="sec">Rechnungsdaten</div>
     <div class="f-grid">
-      <div class="f-col"><label>Rechnungsnummer</label><input id="r-nr" value="" placeholder="z.B. PO-2026-0001"></div>
+      <div class="f-col"><label>Rechnungsnummer *</label><input id="r-nr" value="" placeholder="z.B. PO-2026-0001" style="border-color:var(--blue2)"></div>
       <div class="f-col"><label>Rechnungsdatum</label><input type="date" id="r-dat" value="${hD}"></div>
       <div class="f-col"><label>Lieferdatum</label><input type="date" id="r-lief" value="${hD}"></div>
       <div class="f-col"><label>Kunde *</label>
@@ -1183,7 +1183,9 @@ function colRec(){
   return{rechnungsnummer:gv('r-nr'),datum:gv('r-dat'),lieferdatum:gv('r-lief'),kundeId:gv('r-kunde'),monat:gv('r-monat'),ansprechpartner:gv('r-ansp'),selectedEinsaetze:se,positionen:pos,netto:parseFloat(n.toFixed(2)),mwst:parseFloat((n*.19).toFixed(2)),brutto:parseFloat((n*1.19).toFixed(2)),bezahlt:false};
 }
 async function saveRec(){
-  const d=colRec();if(!d.kundeId){toast('Bitte Kunden wählen',false);return null;}
+  const d=colRec();
+  if(!d.kundeId){toast('Bitte Kunden wählen',false);return null;}
+  if(!d.rechnungsnummer||!d.rechnungsnummer.trim()){toast('Bitte Rechnungsnummer eingeben',false);$('r-nr').focus();return null;}
   if(await recExistVollmonat(d.kundeId,d.monat)){toast('Monat bereits vollständig abgerechnet',false);return null;}
   const ref=await fsAdd('rechnungen',d);
   for(const e of d.selectedEinsaetze){await fsUpd('einsaetze',e.id,{abgerechnet:'ja'});}
@@ -1288,10 +1290,10 @@ async function genRecPdf(r,k){
 
   const rl=320,rv=445;
   pdf.font(true,9);pdf.color(0,0,0);
-  pdf.text('Rechnung Nr.:',rl,62);pdf.hLine(rv,63,558,63,190,190,190,.5);
+  pdf.text('Rechnung Nr.:',rl,62);pdf.font(false,9);pdf.text(r.rechnungsnummer||'',rv,62);pdf.font(true,9);
   pdf.font(true,9);pdf.text('Rechnungsdatum:',rl,75);pdf.font(false,9);pdf.text(r.datum||'',rv,75);
   pdf.font(true,9);pdf.text('Lieferdatum:',rl,88);pdf.font(false,9);pdf.text(r.lieferdatum||'',rv,88);
-  pdf.font(true,9);pdf.text('Kundennr.:',rl,101);pdf.hLine(rv,102,558,102,190,190,190,.5);
+  pdf.font(true,9);pdf.text('Kundennr.:',rl,101);pdf.font(false,9);pdf.text(k.kundennummer||'',rv,101);pdf.font(true,9);
   pdf.font(true,9);pdf.text('Ansprechpartner:',rl,114);pdf.font(false,9);pdf.text(r.ansprechpartner||'Karin Koch',rv,114);
 
   pdf.hLine(36,126,559,126,37,99,235,1);
