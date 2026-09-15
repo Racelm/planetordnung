@@ -431,7 +431,7 @@ tr.dim td{opacity:.5;font-style:italic}
 <!-- FIREBASE SDK -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut }
+import { getAuth, onAuthStateChanged, signOut }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc,
   getDocs, getDoc, query, where, orderBy, onSnapshot, setDoc, enableIndexedDbPersistence }
@@ -528,34 +528,28 @@ async function fsAll(col)         { const s=await getDocs(userCol(col)); return 
 async function fsWhere(col,f,op,v){ const q=query(userCol(col),where(f,op,v)); const s=await getDocs(q); return s.docs.map(d=>({id:d.id,...d.data()})); }
 
 // ── AUTH ───────────────────────────────────────────────────
-on($('google-btn'),'click',async()=>{
-  try{
-    const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
-  } catch(e) {
-    alert('Anmeldung fehlgeschlagen: ' + e.message);
-  }
-});
-
 on($('btn-logout'),'click',async()=>{
-  if(confirm('Wirklich abmelden?')) await signOut(auth);
+  if(confirm('Wirklich abmelden?')) {
+    await signOut(auth);
+    window.location.href = 'login.html';
+  }
 });
 
 onAuthStateChanged(auth, async user=>{
   currentUser = user;
   if(user){
-    $('loader').classList.add('hide');
+    // Eingeloggt - App zeigen
+    document.getElementById('loader').style.display = 'none';
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-    $('v-home').classList.add('active');
-    $('user-badge').textContent = user.displayName || 'Karin Koch';
-    $('user-badge').style.display = 'block';
-    $('btn-logout').style.display = 'block';
+    document.getElementById('v-home').classList.add('active');
+    document.getElementById('user-badge').textContent = user.displayName || 'Karin Koch';
+    document.getElementById('user-badge').style.display = 'block';
+    document.getElementById('btn-logout').style.display = 'block';
     renderHomeStats();
     loadLogo();
   } else {
-    $('loader').classList.add('hide');
-    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-    $('v-login').classList.add('active');
+    // Nicht eingeloggt - zur Login-Seite
+    window.location.href = 'login.html';
   }
 });
 // ── HOME STATS ─────────────────────────────────────────────
